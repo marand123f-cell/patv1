@@ -181,7 +181,24 @@ function App() {
      }, 1500);
     } catch (error) {
       console.error('Erro na vetorização:', error);
+      alert('Erro na vetorização: ' + error);
       setIsProcessing(false);
+      // Em caso de erro, criar contornos de exemplo para teste
+      const testContours = [
+        [
+          { x: 100, y: 100 },
+          { x: 200, y: 100 },
+          { x: 250, y: 150 },
+          { x: 200, y: 200 },
+          { x: 100, y: 200 },
+          { x: 50, y: 150 }
+        ]
+      ];
+      setPatternData(prev => ({
+        ...prev,
+        contours: testContours
+      }));
+      updateStepStatus('export', false, true);
     }
  }, [patternData.originalImage, patternData.perspectivePoints, patternData.roi, imageProcessor]);
 

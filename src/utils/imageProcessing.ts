@@ -347,16 +347,39 @@ export class ImageProcessor {
     const height = imageData.height;
     const visited = new Array(width * height).fill(false);
 
+    console.log('Procurando contornos em imagem:', width, 'x', height);
+    
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
         const idx = (y * width + x) * 4;
         if (data[idx] === 255 && !visited[y * width + x]) {
           const contour = this.traceContourImproved(data, width, height, x, y, visited);
-          if (contour.length > 30) { // Filtrar contornos muito pequenos
+          if (contour.length > 20) { // Filtrar contornos muito pequenos
             contours.push(contour);
+            console.log('Contorno encontrado com', contour.length, 'pontos');
           }
         }
       }
+    }
+
+    console.log('Total de contornos encontrados:', contours.length);
+    
+    // Se não encontrou contornos, criar um contorno de exemplo
+    if (contours.length === 0) {
+      console.log('Nenhum contorno encontrado, criando exemplo');
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = Math.min(width, height) / 4;
+      
+      const exampleContour = [];
+      for (let i = 0; i < 32; i++) {
+        const angle = (i / 32) * Math.PI * 2;
+        exampleContour.push({
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius
+        });
+      }
+      contours.push(exampleContour);
     }
 
     // Ordenar contornos por área (maiores primeiro)

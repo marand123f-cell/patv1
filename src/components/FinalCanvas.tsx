@@ -37,6 +37,8 @@ const FinalCanvas: React.FC<FinalCanvasProps> = ({ patternData, customerName, on
     // Draw labels and title
     CanvasDrawingUtils.drawLabels(ctx, customerName);
 
+    console.log('Desenhando contornos:', patternData.contours.length);
+    
     // Scale and center the contours
     if (patternData.contours.length > 0 && patternData.calibration) {
       const scaleFactor = PIXELS_PER_MM * 10 / patternData.calibration.pixelsPerCm;
@@ -150,6 +152,57 @@ const FinalCanvas: React.FC<FinalCanvasProps> = ({ patternData, customerName, on
        ctx.textAlign = 'right';
        ctx.fillText('* Redimensionado para caber na página', canvas.width - 20, canvas.height - 60);
      }
+    } else if (patternData.contours.length > 0) {
+      // Se não há calibração, desenhar contornos sem escala
+      console.log('Desenhando sem calibração');
+      const margin = 100;
+      const availableWidth = canvas.width - (margin * 2);
+      const availableHeight = canvas.height - 200;
+      
+      // Find pattern bounds
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      patternData.contours.forEach(contour => {
+        contour.forEach(point => {
+          minX = Math.min(minX, point.x);
+          minY = Math.min(minY, point.y);
+          maxX = Math.max(maxX, point.x);
+          maxY = Math.max(maxY, point.y);
+        });
+      });
+      
+      const patternWidth = maxX - minX;
+      const patternHeight = maxY - minY;
+      
+      // Scale to fit
+      const scaleX = availableWidth / patternWidth;
+      const scaleY = availableHeight / patternHeight;
+      const scale = Math.min(scaleX, scaleY) * 0.8;
+      
+      const scaledWidth = patternWidth * scale;
+      const scaledHeight = patternHeight * scale;
+      
+      const offsetX = (canvas.width - scaledWidth) / 2;
+      const offsetY = 150 + (availableHeight - scaledHeight) / 2;
+      
+      // Draw scaled contours
+      const scaledContours = patternData.contours.map(contour =>
+        contour.map(point => ({
+          x: (point.x - minX) * scale + offsetX,
+          y: (point.y - minY) * scale + offsetY
+        }))
+      );
+      
+      scaledContours.forEach((contour, index) => {
+        const colors = ['#dc2626', '#2563eb', '#059669', '#ea580c', '#7c3aed'];
+        const color = colors[index % colors.length];
+        CanvasDrawingUtils.drawContours(ctx, [contour], color);
+      });
+      
+      // Add note about missing calibration
+      ctx.font = '14px sans-serif';
+      ctx.fillStyle = '#dc2626';
+      ctx.textAlign = 'center';
+      ctx.fillText('* Calibração não realizada - escala aproximada', canvas.width / 2, canvas.height - 80);
     }
 
     onCanvasReady(canvas);
