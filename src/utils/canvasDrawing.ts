@@ -57,9 +57,13 @@ export class CanvasDrawingUtils {
 
   static drawContours(ctx: CanvasRenderingContext2D, contours: Point[][], color: string = '#dc2626') {
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+   ctx.lineWidth = 1.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+   ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+   ctx.shadowBlur = 1;
+   ctx.shadowOffsetX = 0.5;
+   ctx.shadowOffsetY = 0.5;
 
     contours.forEach(contour => {
       if (contour.length < 2) return;
@@ -74,6 +78,12 @@ export class CanvasDrawingUtils {
       ctx.closePath();
       ctx.stroke();
     });
+   
+   // Reset shadow
+   ctx.shadowColor = 'transparent';
+   ctx.shadowBlur = 0;
+   ctx.shadowOffsetX = 0;
+   ctx.shadowOffsetY = 0;
   }
 
   static drawCalibrationLine(ctx: CanvasRenderingContext2D, calibration: CalibrationData) {

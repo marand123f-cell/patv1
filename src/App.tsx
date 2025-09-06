@@ -120,14 +120,37 @@ function App() {
     try {
       // Load and process image
       const img = await imageProcessor.loadImage(patternData.originalImage);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+     
+     // Aplicar correção de perspectiva se os pontos estão definidos
+     let processedCanvas: HTMLCanvasElement;
+     if (patternData.perspectivePoints.length === 4) {
+       processedCanvas = imageProcessor.perspectiveTransform(img, patternData.perspectivePoints);
+     } else {
+       processedCanvas = document.createElement('canvas');
+       const ctx = processedCanvas.getContext('2d')!;
+       processedCanvas.width = img.width;
+       processedCanvas.height = img.height;
+       ctx.drawImage(img, 0, 0);
+     }
+     
+     // Aplicar ROI se definido
+     if (patternData.roi) {
+       const roiCanvas = document.createElement('canvas');
+       const roiCtx = roiCanvas.getContext('2d')!;
+       roiCanvas.width = patternData.roi.width;
+       roiCanvas.height = patternData.roi.height;
+       
+       roiCtx.drawImage(
+         processedCanvas,
+         patternData.roi.x, patternData.roi.y, patternData.roi.width, patternData.roi.height,
+         0, 0, roiCanvas.width, roiCanvas.height
+       );
+       
+       processedCanvas = roiCanvas;
+     }
+     
+     const ctx = processedCanvas.getContext('2d')!;
+     const imageData = ctx.getImageData(0, 0, processedCanvas.width, processedCanvas.height);
       
       // Apply edge detection
       const edges = imageProcessor.cannyEdgeDetection(imageData);
@@ -135,25 +158,32 @@ function App() {
       // Find contours
       const contours = imageProcessor.findContours(edges);
       
-      // Simplify contours
-      const simplifiedContours = contours.map(contour => 
-        imageProcessor.douglasPeucker(contour, 3)
-      );
+     // Processar e simplificar contornos
+     const processedContours = contours
+       .filter(contour => contour.length > 50) // Filtrar contornos muito pequenos
+       .slice(0, 10) // Limitar número de contornos
+       .map(contour => {
+         // Suavizar contorno
+         const smoothed = imageProcessor.smoothContour(contour, 5);
+         // Simplificar contorno
+         return imageProcessor.douglasPeucker(smoothed, 2);
+       })
+       .filter(contour => contour.length > 10); // Filtrar novamente após simplificação
 
       setPatternData(prev => ({
         ...prev,
-        contours: simplifiedContours.filter(contour => contour.length > 10)
+       contours: processedContours
       }));
 
       setTimeout(() => {
         updateStepStatus('export', false, true);
         setIsProcessing(false);
-      }, 2000);
+     }, 1500);
     } catch (error) {
       console.error('Erro na vetorização:', error);
       setIsProcessing(false);
     }
-  }, [patternData.originalImage, imageProcessor]);
+ }, [patternData.originalImage, patternData.perspectivePoints, patternData.roi, imageProcessor]);
 
   const handleReset = useCallback(() => {
     setPatternData({

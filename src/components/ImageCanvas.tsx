@@ -29,6 +29,7 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState<Point | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
+ const [processedImage, setProcessedImage] = useState<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const img = new Image();
@@ -36,6 +37,31 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
     img.src = imageData;
   }, [imageData]);
 
+ // Aplicar correção de perspectiva quando os 4 pontos estão definidos
+ useEffect(() => {
+   if (image && perspectivePoints.length === 4 && mode !== 'perspective') {
+     const canvas = document.createElement('canvas');
+     const ctx = canvas.getContext('2d')!;
+     
+     // Calcular dimensões baseadas nos pontos de perspectiva
+     const minX = Math.min(...perspectivePoints.map(p => p.x));
+     const maxX = Math.max(...perspectivePoints.map(p => p.x));
+     const minY = Math.min(...perspectivePoints.map(p => p.y));
+     const maxY = Math.max(...perspectivePoints.map(p => p.y));
+     
+     canvas.width = maxX - minX;
+     canvas.height = maxY - minY;
+     
+     // Desenhar área corrigida
+     ctx.drawImage(
+       image,
+       minX, minY, maxX - minX, maxY - minY,
+       0, 0, canvas.width, canvas.height
+     );
+     
+     setProcessedImage(canvas);
+   }
+ }, [image, perspectivePoints, mode]);
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -53,8 +79,12 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
     // Clear canvas
     ctx.clearRect(0, 0, displayWidth, displayHeight);
 
-    // Calculate image scaling to fit canvas
-    const imageAspect = image.width / image.height;
+   // Usar imagem processada se disponível, senão usar original
+   const currentImage = (mode !== 'perspective' && processedImage) ? processedImage : image;
+   if (!currentImage) return;
+   
+   // Calculate image scaling to fit canvas
+   const imageAspect = currentImage.width / currentImage.height;
     const canvasAspect = displayWidth / displayHeight;
     let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
 
@@ -69,11 +99,11 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
     }
 
     // Draw image
-    ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+   ctx.drawImage(currentImage, offsetX, offsetY, drawWidth, drawHeight);
 
     // Store scaling factors for coordinate conversion
-    (canvas as any).scaleX = drawWidth / image.width;
-    (canvas as any).scaleY = drawHeight / image.height;
+   (canvas as any).scaleX = drawWidth / currentImage.width;
+   (canvas as any).scaleY = drawHeight / currentImage.height;
     (canvas as any).offsetX = offsetX;
     (canvas as any).offsetY = offsetY;
 
@@ -111,7 +141,7 @@ const ImageCanvas: React.FC<ImageCanvasProps> = ({
       );
       CanvasDrawingUtils.drawContours(ctx, scaledContours);
     }
-  }, [image, mode, perspectivePoints, roi, calibration, contours]);
+ }, [image, processedImage, mode, perspectivePoints, roi, calibration, contours]);
 
   useEffect(() => {
     drawCanvas();

@@ -24,10 +24,16 @@ const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ steps, currentStep })
                 step.active ? 'bg-blue-100' : 'bg-gray-100'
               }`}>
                 {step.completed ? (
-                  <Check className="w-5 h-5" />
+               <h3 className="text-xl font-semibold text-gray-800 mb-2">Vetorizando Molde...</h3>
                 ) : (
-                  <Circle className="w-5 h-5" />
+                 Aplicando correção de perspectiva, detecção de bordas avançada e vetorização inteligente
                 )}
+               <div className="mt-4 text-sm text-gray-500">
+                 <p>• Corrigindo perspectiva da imagem</p>
+                 <p>• Detectando bordas com algoritmo Canny</p>
+                 <p>• Simplificando contornos automaticamente</p>
+                 <p>• Otimizando para escala 1:1</p>
+               </div>
               </div>
               <span className="text-sm text-center font-medium">{step.name}</span>
               {step.active && (
